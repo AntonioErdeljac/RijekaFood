@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "mobile",
-    "description": "A very interesting project.",
-    "slug": "mobile",
+    "name": "RijekaFood",
+    "description": "Find places to eat in City of Rijeka.",
+    "slug": "rijeka-food",
     "privacy": "public",
     "sdkVersion": "27.0.0",
     "platforms": ["ios", "android"],
@@ -12,7 +12,11 @@
     "splash": {
       "image": "./assets/images/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#F78D3F"
+    },
+    "android": {
+      "package": "com.rijekafood.android",
+      "permissions": []
     },
     "updates": {
       "fallbackToCacheTimeout": 0
@@ -21,7 +25,8 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.rijekafood.android"
     }
   }
 }

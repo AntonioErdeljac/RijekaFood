@@ -1,107 +1,306 @@
+import axios from 'axios';
 import React from 'react';
 import {
-  Image,
   Platform,
   ScrollView,
   StyleSheet,
-  Text,
   TouchableOpacity,
+  Image,
   View,
+  ActivityIndicator,
+  TouchableWithoutFeedback,
 } from 'react-native';
+import { Container, Header, Content, Card, CardItem, Thumbnail, Text, Button, Icon, Left, Body, Right, Input, Item } from 'native-base';
 import { WebBrowser } from 'expo';
+import { EvilIcons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
+import * as Animatable from 'react-native-animatable';
+import ActionButton from 'react-native-action-button';
+CardAnimatable = Animatable.createAnimatableComponent(Card);
+ContentAnimatable = Animatable.createAnimatableComponent(Content);
+
+
+
+import Colors from '../constants/Colors';
 
 import { MonoText } from '../components/StyledText';
 
 export default class HomeScreen extends React.Component {
   static navigationOptions = {
     header: null,
+    tabBarVisible: false,
   };
+
+  constructor(props) {
+    super(props);
+
+    this.state = {
+      results: null,
+      search: '',
+      searchResults: [],
+      selectedPlace: null,
+    };
+
+    this.content = {}
+
+    this.handleSearch = this.handleSearch.bind(this);
+    this.handleSelect = this.handleSelect.bind(this);
+    this.handleDeselect = this.handleDeselect.bind(this);
+  }
+
+  componentDidMount() {
+    axios('https://maps.googleapis.com/maps/api/place/textsearch/json?query=food+in+Rijeka&type=restaurant&key=AIzaSyAnwalUtTFmSsNgnBiMW7gF2aUX9wlX7jg')
+      .then((response) => this.setState({ results: response.data.results }));
+  }
+
+  handleSelect(result) {
+    this.content[result.id].fadeOutRight(500)
+      .then(() => {
+        this.setState({
+          selectedPlace: result,
+        });
+      })
+  }
+
+  handleSearch(text) {
+    const { results } = this.state;
+
+    this.setState({
+      search: text,
+    }, () => {
+      axios(`https://maps.googleapis.com/maps/api/place/textsearch/json?query=${this.state.search}+in+Rijeka&type=restaurant&key=AIzaSyAnwalUtTFmSsNgnBiMW7gF2aUX9wlX7jg`)
+        .then((response) => this.setState({ searchResults: response.data.results }), () => {
+          this.setState({
+            searchResults: this.searchResults.concat(results.filter((result) => result.name.toLowerCase().indexOf(text.toLowerCase()) !== -1)),
+          });
+        });
+    })
+  }
+
+  handleDeselect() {
+    const { selectedPlace } = this.state;
+    this.selectedRef.fadeOutLeft(500)
+      .then(() => {
+        this.setState({
+          tempSelectedPlace: selectedPlace,
+          selectedPlace: null,
+        }, () => {
+          if(this.content[this.state.tempSelectedPlace.id]) {
+            this.content[this.state.tempSelectedPlace.id].fadeInRight(500)
+              .then(() => {
+                this.setState({
+                  tempSelectedPlace: null,
+                })
+              })
+          } else {
+            this.setState({
+              tempSelectedPlace: null,
+            })
+          }
+        });
+      })
+  }
 
   render() {
-    return (
-      <View style={styles.container}>
-        <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-          <View style={styles.welcomeContainer}>
+    const { results, search, searchResults, selectedPlace } = this.state;
+
+    let content = <ActivityIndicator size="large" color={Colors.tintColor} />;
+
+    if(!selectedPlace && results && search === '') {
+      content = results.map((result, i) => {
+        if(result) {
+          return (
+            <TouchableWithoutFeedback
+              key={Math.random()}
+              onPress={() => this.handleSelect(result)}
+            >
+              <CardAnimatable
+                ref = {ref => this.content[result.id] = ref}
+                style={{
+                  height: 90,
+                  borderColor: 'transparent',
+                  borderWidth: 0,
+                  marginLeft: 10,
+                  marginRight: 10,
+                  borderRadius: 3, marginBottom: i + 1 === results.length ? 50 : 5,
+                  elevation: 0,
+                  }}>
+                <CardItem style={{ borderRadius: 10 }}>
+                  <Left>
+                    <Thumbnail style={{ borderRadius: 5 }} source={{uri: `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${result.photos && result.photos[0] && result.photos[0].photo_reference}&key=AIzaSyAnwalUtTFmSsNgnBiMW7gF2aUX9wlX7jg`}} />
+                    <Body>
+                      <Text style={{ fontFamily: 'nunito' }}>{result.name}</Text>
+                      <Text note style={{ fontFamily: 'nunito', fontSize: 10 }}>{result.formatted_address}</Text>
+                    </Body>
+                  </Left>
+                </CardItem>
+              </CardAnimatable>
+            </TouchableWithoutFeedback>
+          )
+        }
+      });
+    }
+
+    if(!selectedPlace && results && searchResults && search !== '') {
+      content = searchResults.map((result, i) => {
+        return (
+        <TouchableWithoutFeedback
+          key={Math.random()}
+          onPress={() => this.handleSelect(result)}
+        >
+          <CardAnimatable
+            key={Math.random()}
+            ref = {ref => this.content[result.id] = ref}
+            style={{
+              height: 90,
+              borderColor: 'transparent',
+              borderWidth: 0,
+              marginLeft: 10,
+              marginRight: 10,
+              borderRadius: 3, marginBottom: i + 1 === searchResults.length ? 50 : 5,
+              elevation: 0,
+              }}>
+            <CardItem style={{ borderRadius: 10 }}>
+              <Left>
+                <Thumbnail style={{ borderRadius: 5 }} source={{uri: `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${result.photos && result.photos[0] && result.photos[0].photo_reference}&key=AIzaSyAnwalUtTFmSsNgnBiMW7gF2aUX9wlX7jg`}} />
+                <Body>
+                  <Text style={{ fontFamily: 'nunito' }}>{result.name}</Text>
+                  <Text note style={{ fontFamily: 'nunito', fontSize: 10 }}>{result.formatted_address}</Text>
+                </Body>
+              </Left>
+            </CardItem>
+          </CardAnimatable>
+        </TouchableWithoutFeedback>
+        )
+      })
+    }
+
+    if(selectedPlace) {
+      content = (
+        <CardAnimatable
+          ref={ref => this.selectedRef = ref}
+          animation="fadeInLeftBig"
+          style={{
+            borderColor: 'transparent',
+            borderWidth: 0,
+            marginLeft: 10,
+            marginRight: 10,
+            borderRadius: 3,
+            paddingBottom: 90,
+            elevation: 0,
+            }}>
+          <CardItem
+            style={{
+              borderRadius: 7,
+            }}
+          >
             <Image
-              source={
-                __DEV__
-                  ? require('../assets/images/robot-dev.png')
-                  : require('../assets/images/robot-prod.png')
-              }
-              style={styles.welcomeImage}
-            />
-          </View>
+            borderRadius={7}
+            style={{
+              borderRadius: 7,
+            }}
+            source={{uri: `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${selectedPlace.photos && selectedPlace.photos[0] && selectedPlace.photos[0].photo_reference}&key=AIzaSyAnwalUtTFmSsNgnBiMW7gF2aUX9wlX7jg`}} style={{height: 200, width: null, flex: 1}}/>
+          </CardItem>
+          <CardItem>
+            <Left>
+              <Text style={{ fontSize: 18, fontFamily: 'nunito', color: 'rgba(0,0,0,.8)' }}>{selectedPlace.name}</Text>
+            </Left>
+          </CardItem>
+          <CardItem>
+            <Left>
+              <EvilIcons size={28} color="rgba(0,0,0,.4)" name="location" />
+              <Text style={{ fontSize: 10, fontFamily: 'nunito', color: 'rgba(0,0,0,.4)' }}>{selectedPlace.formatted_address}</Text>
+            </Left>
+          </CardItem>
+          <CardItem>
+            <Left>
+              <EvilIcons size={28} color="rgba(0,0,0,.4)" name="star" />
+              <Text style={{ fontSize: 10, fontFamily: 'nunito', color: 'rgba(0,0,0,.4)' }}>{selectedPlace.rating}</Text>
+            </Left>
+          </CardItem>
+          {selectedPlace.openingHours && selectedPlace.opening_hours.open_now
+          ? (
+              <CardItem>
+                <Left>
+                  <EvilIcons size={28} color="rgba(0,0,0,.4)" name="check" />
+                  <Text style={{ fontSize: 10, fontFamily: 'nunito', color: 'rgba(0,0,0,.4)' }}>Open now</Text>
+                </Left>
+              </CardItem>
+            )
+          : (
+            <CardItem>
+              <Left>
+                <EvilIcons size={28} color="rgba(0,0,0,.4)" name="close-o" />
+                <Text style={{ fontSize: 10, fontFamily: 'nunito', color: 'rgba(0,0,0,.4)' }}>Closed now</Text>
+              </Left>
+            </CardItem>
+          )
+          }
+        </CardAnimatable>
+      )
+    }
 
-          <View style={styles.getStartedContainer}>
-            {this._maybeRenderDevelopmentModeWarning()}
-
-            <Text style={styles.getStartedText}>Get started by opening</Text>
-
-            <View style={[styles.codeHighlightContainer, styles.homeScreenFilename]}>
-              <MonoText style={styles.codeHighlightText}>screens/HomeScreen.js</MonoText>
-            </View>
-
-            <Text style={styles.getStartedText}>
-              Change this text and your app will automatically reload.
+    return (
+      <Container style={{ backgroundColor: '#fff'}}>
+        <Animatable.View animation="slideInDown" style={{ elevation: 1, backgroundColor: Colors.tintColor, height: 170, display: 'flex', justifyContent: 'flex-start', borderBottomLeftRadius: 30, borderBottomRightRadius: 30, paddingBottom: 20, paddingTop: 20 }}>
+          <View style={{ paddingBottom: 20, marginTop: 30 }}>
+            <Text style={{ color: '#fff', fontFamily: 'nexa', fontSize: 30, textAlign: 'center' }}>
+              <MaterialCommunityIcons
+                name={'food-fork-drink'}
+                size={28}
+                style={{ marginBottom: -3, width: 25 }}
+                color={'#fff'}
+              />
+              &nbsp;RijekaFood
             </Text>
           </View>
-
-          <View style={styles.helpContainer}>
-            <TouchableOpacity onPress={this._handleHelpPress} style={styles.helpLink}>
-              <Text style={styles.helpLinkText}>Help, it didn’t automatically reload!</Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-
-        <View style={styles.tabBarInfoContainer}>
-          <Text style={styles.tabBarInfoText}>This is a tab bar. You can edit it in:</Text>
-
-          <View style={[styles.codeHighlightContainer, styles.navigationFilename]}>
-            <MonoText style={styles.codeHighlightText}>navigation/MainTabNavigator.js</MonoText>
-          </View>
-        </View>
-      </View>
+            <Item style={{ backgroundColor: '#fff', marginRight: 20, marginLeft: 20, borderRadius: 30, paddingLeft: 30, padding: 0 }}>
+              <EvilIcons name='search' size={28} color={Colors.tintColor} />
+              <Input value={search} onChangeText={text => this.handleSearch(text)} placeholder='Pretraga' placeholderTextColor="rgba(0,0,0,.4)" style={{ fontSize: 15, fontFamily: 'nunito', color: 'rgba(0,0,0,.7)', borderRadius: 30, borderWidth: 0 }}/>
+            </Item>
+        </Animatable.View>
+      <Content
+        style={{ paddingTop: 30, backgroundColor: '#fff' }}>
+        {content}
+      </Content>
+      {selectedPlace &&
+        <ActionButton
+          buttonColor={Colors.tintColor}
+          onPress={this.handleDeselect}
+          renderIcon = { () => (
+              <Feather size={19} name="arrow-left" color="#fff" />
+            )
+          }
+        >
+        </ActionButton>
+      }
+    </Container>
     );
   }
-
-  _maybeRenderDevelopmentModeWarning() {
-    if (__DEV__) {
-      const learnMoreButton = (
-        <Text onPress={this._handleLearnMorePress} style={styles.helpLinkText}>
-          Learn more
-        </Text>
-      );
-
-      return (
-        <Text style={styles.developmentModeText}>
-          Development mode is enabled, your app will be slower but you can use useful development
-          tools. {learnMoreButton}
-        </Text>
-      );
-    } else {
-      return (
-        <Text style={styles.developmentModeText}>
-          You are not in development mode, your app will run at full speed.
-        </Text>
-      );
-    }
-  }
-
-  _handleLearnMorePress = () => {
-    WebBrowser.openBrowserAsync('https://docs.expo.io/versions/latest/guides/development-mode');
-  };
-
-  _handleHelpPress = () => {
-    WebBrowser.openBrowserAsync(
-      'https://docs.expo.io/versions/latest/guides/up-and-running.html#can-t-see-your-changes'
-    );
-  };
 }
 
 const styles = StyleSheet.create({
+  searchInput: {
+    marginLeft: 10,
+    marginRight: 10,
+  },
+  headerContainer: {
+    justifyContent: 'space-around',
+    backgroundColor: Colors.tintColor,
+    height: 150,
+    paddingTop: 80,
+    flexDirection: 'row',
+  },
+  headerText: {
+    color: '#fff',
+    flex: 1,
+    fontFamily: 'nunito',
+    fontSize: 30,
+    textAlign: 'center',
+  },
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    paddingTop: 80,
+    backgroundColor: 'rgba(0,0,0,.01)',
   },
   developmentModeText: {
     marginBottom: 20,
