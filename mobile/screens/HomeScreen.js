@@ -12,8 +12,9 @@ import {
 } from 'react-native';
 import { Container, Header, Content, Card, CardItem, Thumbnail, Text, Button, Icon, Left, Body, Right, Input, Item } from 'native-base';
 import { WebBrowser } from 'expo';
-import { EvilIcons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
+import { Ionicons, EvilIcons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import * as Animatable from 'react-native-animatable';
+import call from 'react-native-phone-call'
 import ActionButton from 'react-native-action-button';
 CardAnimatable = Animatable.createAnimatableComponent(Card);
 ContentAnimatable = Animatable.createAnimatableComponent(Content);
@@ -48,17 +49,26 @@ export default class HomeScreen extends React.Component {
   }
 
   componentDidMount() {
-    axios('https://maps.googleapis.com/maps/api/place/textsearch/json?query=food+in+Rijeka&type=restaurant&key=AIzaSyAnwalUtTFmSsNgnBiMW7gF2aUX9wlX7jg')
+    axios('https://maps.googleapis.com/maps/api/place/textsearch/json?query=food+in+Rijeka&type=restaurant&key=AIzaSyA1PIA1uULQ0nGyuoDZSyMHi3lQj3hG3xA')
       .then((response) => this.setState({ results: response.data.results }));
   }
 
   handleSelect(result) {
     this.content[result.id].fadeOutRight(500)
       .then(() => {
-        this.setState({
-          selectedPlace: result,
-        });
-      })
+        axios(`https://maps.googleapis.com/maps/api/place/details/json?placeid=${result.place_id}&key=AIzaSyAnwalUtTFmSsNgnBiMW7gF2aUX9wlX7jg`)
+          .then((response) => {
+            this.setState({
+              selectedPlace: {
+                ...result,
+                formatted_phone_number: response.data.result.formatted_phone_number,
+                weekday_text: response.data.result.opening_hours && response.data.result.opening_hours.weekday_text,
+                reviews: response.data.result.reviews,
+                locationImage: `https://maps.googleapis.com/maps/api/staticmap?zoom=17&size=600x600&maptype=roadmap&markers=color:red%7Clabel:%7C${result.geometry.location.lat},${result.geometry.location.lng}&key=AIzaSyA1PIA1uULQ0nGyuoDZSyMHi3lQj3hG3xA`
+              },
+            });
+          })
+        })
   }
 
   handleSearch(text) {
@@ -67,10 +77,10 @@ export default class HomeScreen extends React.Component {
     this.setState({
       search: text,
     }, () => {
-      axios(`https://maps.googleapis.com/maps/api/place/textsearch/json?query=${this.state.search}+in+Rijeka&type=restaurant&key=AIzaSyAnwalUtTFmSsNgnBiMW7gF2aUX9wlX7jg`)
+      axios(`https://maps.googleapis.com/maps/api/place/textsearch/json?query=${this.state.search}+in+Rijeka&type=restaurant&key=AIzaSyA1PIA1uULQ0nGyuoDZSyMHi3lQj3hG3xA`)
         .then((response) => this.setState({ searchResults: response.data.results }), () => {
           this.setState({
-            searchResults: this.searchResults.concat(results.filter((result) => result.name.toLowerCase().indexOf(text.toLowerCase()) !== -1)),
+            searchResults: this.searchResults,
           });
         });
     })
@@ -108,6 +118,11 @@ export default class HomeScreen extends React.Component {
     if(!selectedPlace && results && search === '') {
       content = results.map((result, i) => {
         if(result) {
+
+        let image = result.icon;
+        if(result.photos && result.photos[0]) {
+          image = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${result.photos[0].photo_reference}&key=AIzaSyA1PIA1uULQ0nGyuoDZSyMHi3lQj3hG3xA`;
+        }
           return (
             <TouchableWithoutFeedback
               key={Math.random()}
@@ -126,7 +141,7 @@ export default class HomeScreen extends React.Component {
                   }}>
                 <CardItem style={{ borderRadius: 10 }}>
                   <Left>
-                    <Thumbnail style={{ borderRadius: 5 }} source={{uri: `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${result.photos && result.photos[0] && result.photos[0].photo_reference}&key=AIzaSyAnwalUtTFmSsNgnBiMW7gF2aUX9wlX7jg`}} />
+                    <Thumbnail style={{ borderRadius: 5 }} source={{uri: image}} />
                     <Body>
                       <Text style={{ fontFamily: 'nunito' }}>{result.name}</Text>
                       <Text note style={{ fontFamily: 'nunito', fontSize: 10 }}>{result.formatted_address}</Text>
@@ -142,6 +157,10 @@ export default class HomeScreen extends React.Component {
 
     if(!selectedPlace && results && searchResults && search !== '') {
       content = searchResults.map((result, i) => {
+        let image = result.icon;
+        if(result.photos && result.photos[0]) {
+          image = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${result.photos[0].photo_reference}&key=AIzaSyA1PIA1uULQ0nGyuoDZSyMHi3lQj3hG3xA`;
+        }
         return (
         <TouchableWithoutFeedback
           key={Math.random()}
@@ -161,7 +180,7 @@ export default class HomeScreen extends React.Component {
               }}>
             <CardItem style={{ borderRadius: 10 }}>
               <Left>
-                <Thumbnail style={{ borderRadius: 5 }} source={{uri: `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${result.photos && result.photos[0] && result.photos[0].photo_reference}&key=AIzaSyAnwalUtTFmSsNgnBiMW7gF2aUX9wlX7jg`}} />
+                <Thumbnail style={{ borderRadius: 5 }} source={{uri: image}} />
                 <Body>
                   <Text style={{ fontFamily: 'nunito' }}>{result.name}</Text>
                   <Text note style={{ fontFamily: 'nunito', fontSize: 10 }}>{result.formatted_address}</Text>
@@ -175,49 +194,9 @@ export default class HomeScreen extends React.Component {
     }
 
     if(selectedPlace) {
-      content = (
-        <CardAnimatable
-          ref={ref => this.selectedRef = ref}
-          animation="fadeInLeftBig"
-          style={{
-            borderColor: 'transparent',
-            borderWidth: 0,
-            marginLeft: 10,
-            marginRight: 10,
-            borderRadius: 3,
-            paddingBottom: 90,
-            elevation: 0,
-            }}>
-          <CardItem
-            style={{
-              borderRadius: 7,
-            }}
-          >
-            <Image
-            borderRadius={7}
-            style={{
-              borderRadius: 7,
-            }}
-            source={{uri: `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${selectedPlace.photos && selectedPlace.photos[0] && selectedPlace.photos[0].photo_reference}&key=AIzaSyAnwalUtTFmSsNgnBiMW7gF2aUX9wlX7jg`}} style={{height: 200, width: null, flex: 1}}/>
-          </CardItem>
-          <CardItem>
-            <Left>
-              <Text style={{ fontSize: 18, fontFamily: 'nunito', color: 'rgba(0,0,0,.8)' }}>{selectedPlace.name}</Text>
-            </Left>
-          </CardItem>
-          <CardItem>
-            <Left>
-              <EvilIcons size={28} color="rgba(0,0,0,.4)" name="location" />
-              <Text style={{ fontSize: 10, fontFamily: 'nunito', color: 'rgba(0,0,0,.4)' }}>{selectedPlace.formatted_address}</Text>
-            </Left>
-          </CardItem>
-          <CardItem>
-            <Left>
-              <EvilIcons size={28} color="rgba(0,0,0,.4)" name="star" />
-              <Text style={{ fontSize: 10, fontFamily: 'nunito', color: 'rgba(0,0,0,.4)' }}>{selectedPlace.rating}</Text>
-            </Left>
-          </CardItem>
-          {selectedPlace.openingHours && selectedPlace.opening_hours.open_now
+      let openingHoursContent = null;
+      if(selectedPlace.opening_hours) {
+        openingHoursContent = selectedPlace.opening_hours.open_now
           ? (
               <CardItem>
                 <Left>
@@ -233,8 +212,127 @@ export default class HomeScreen extends React.Component {
                 <Text style={{ fontSize: 10, fontFamily: 'nunito', color: 'rgba(0,0,0,.4)' }}>Closed now</Text>
               </Left>
             </CardItem>
-          )
+            )
+        } else {
+          openingHoursContent = null;
+        }
+
+      content = (
+        <CardAnimatable
+          ref={ref => this.selectedRef = ref}
+          animation="fadeInLeftBig"
+          style={{
+            borderColor: 'transparent',
+            borderWidth: 0,
+            marginLeft: 10,
+            marginRight: 10,
+            borderRadius: 3,
+            paddingBottom: 90,
+            elevation: 0,
+            }}>
+            {selectedPlace.photos
+              ? (
+                <CardItem
+                style={{
+                  borderRadius: 7,
+                }}
+              >
+                <Image
+                borderRadius={7}
+                style={{
+                  borderRadius: 7,
+                }}
+                source={{uri: `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${selectedPlace.photos && selectedPlace.photos[0] && selectedPlace.photos[0].photo_reference}&key=AIzaSyAnwalUtTFmSsNgnBiMW7gF2aUX9wlX7jg`}} style={{height: 200, width: null, flex: 1}}/>
+              </CardItem>
+              )
+              : (
+                <CardItem
+                style={{
+                  borderRadius: 7,
+                }}
+              >
+                <Image
+                borderRadius={7}
+                style={{
+                  borderRadius: 7,
+                }}
+                source={{uri: selectedPlace.locationImage}} style={{height: 200, width: null, flex: 1}}/>
+              </CardItem>
+              )
+            }
+          <CardItem>
+            <Left>
+              <Text style={{ fontSize: 18, fontFamily: 'nunito', color: 'rgba(0,0,0,.8)' }}>{selectedPlace.name}</Text>
+            </Left>
+          </CardItem>
+          <CardItem button onPress={() => WebBrowser.openBrowserAsync(`https://www.google.com/maps?q=${selectedPlace.formatted_address}`)}>
+            <Left>
+              <EvilIcons size={28} color="rgba(0,0,0,.4)" name="location" />
+              <Text style={{ fontSize: 10, fontFamily: 'nunito', color: 'rgba(0,0,0,.4)' }}>{selectedPlace.formatted_address}</Text>
+            </Left>
+            <Right>
+              <EvilIcons
+                size={28}
+                color="rgba(0,0,0,.4)"
+                name="arrow-right"
+                />
+            </Right>
+          </CardItem>
+            {selectedPlace.formatted_phone_number &&
+            <CardItem>
+              <Left>
+                <Ionicons size={28} style={{ marginLeft: 7 }} color="rgba(0,0,0,.4)" name="ios-call-outline" />
+                <Text style={{ fontSize: 10, fontFamily: 'nunito', color: 'rgba(0,0,0,.4)' }}>{selectedPlace.formatted_phone_number}</Text>
+              </Left>
+            </CardItem>
           }
+          <CardItem>
+            <Left>
+              <EvilIcons size={28} color="rgba(0,0,0,.4)" name="star" />
+              <Text style={{ fontSize: 10, fontFamily: 'nunito', color: 'rgba(0,0,0,.4)' }}>{selectedPlace.rating}</Text>
+            </Left>
+          </CardItem>
+          {openingHoursContent}
+          {selectedPlace.photos &&
+            <CardItem
+              style={{
+                borderRadius: 7,
+              }}
+            >
+              <Image
+              borderRadius={7}
+              style={{
+                borderRadius: 7,
+              }}
+              source={{uri: selectedPlace.locationImage}} style={{height: 200, width: null, flex: 1}}/>
+            </CardItem>
+          }
+          {selectedPlace.reviews.map((review) => {
+            return (
+              <Card key={Math.random()} style={{
+                borderColor: 'rgba(0,0,0,.3)',
+                borderWidth: 1,
+                marginLeft: 10,
+                marginRight: 10,
+                borderRadius: 7,
+                paddingBottom: 20,
+                elevation: 0,
+                }}>
+            <CardItem style={{ borderRadius: 7 }}>
+              <Left>
+                <Thumbnail source={{uri: review.profile_photo_url }} />
+                <Body>
+                  <Text style={{ fontFamily: 'nunito' }}>{review.author_name}</Text>
+                  <Text style={{ fontFamily: 'nunito' }} note>Ocjena: {review.rating}</Text>
+                </Body>
+              </Left>
+            </CardItem>
+            <CardItem>
+              <Text style={{ fontFamily: 'nunito', fontSize: 14 }}>{review.text}</Text>
+            </CardItem>
+          </Card>
+            )
+          })}
         </CardAnimatable>
       )
     }
