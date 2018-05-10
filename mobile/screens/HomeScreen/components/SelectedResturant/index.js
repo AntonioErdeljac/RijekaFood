@@ -1,10 +1,12 @@
 import PropTypes from 'prop-types';
 import React from 'react';
-import { Image, View, BackHandler } from 'react-native';
+import { Image, View, BackHandler, Button, TouchableOpacity } from 'react-native';
 import { Card, CardItem, Text, Left, Right } from 'native-base';
-import { WebBrowser } from 'expo';
+import { WebBrowser, AdMobInterstitial } from 'expo';
 import { Ionicons, EvilIcons } from '@expo/vector-icons';
 import * as Animatable from 'react-native-animatable';
+import Colors from '../../../../constants/Colors';
+
 
 import { ReviewCard } from './components';
 
@@ -14,15 +16,42 @@ class SelectedResturant extends React.Component {
   constructor(props) {
     super(props);
 
+    this.state = {
+      loadReviews: false,
+    };
+
     this.handleBackButtonClick = this.handleBackButtonClick.bind(this);
+    this.showInterstitial = this.showInterstitial.bind(this);
   }
 
   componentWillMount() {
     BackHandler.addEventListener('hardwareBackPress', this.handleBackButtonClick);
   }
 
+
+  componentDidMount() {
+    // AdMobInterstitial.setAdUnitID('ca-app-pub-9853377618487988/7006321979');
+
+    // AdMobInterstitial.addEventListener(
+    //   'interstitialDidClose',
+    //   () => {
+    //     this.setState({
+    //       loadReviews: true,
+    //     });
+    //   },
+    // );
+  }
+
   componentWillUnmount() {
     BackHandler.removeEventListener('hardwareBackPress', this.handleBackButtonClick);
+    AdMobInterstitial.removeAllListeners();
+  }
+
+  showInterstitial() {
+    this.setState({
+      loadReviews: true,
+    });
+    AdMobInterstitial.requestAd().then(() => AdMobInterstitial.showAd());
   }
 
   handleBackButtonClick() {
@@ -33,9 +62,9 @@ class SelectedResturant extends React.Component {
     return true;
   }
 
-
   render() {
     const { selectedPlace } = this.props;
+    const { loadReviews } = this.state;
 
     let openingHoursContent = null;
 
@@ -170,6 +199,29 @@ class SelectedResturant extends React.Component {
           </CardItem>
           {openingHoursContent}
           {locationImageContent}
+          {/* {!loadReviews &&
+          <TouchableOpacity
+            style={{
+              borderColor: 'transparent',
+              borderWidth: 0,
+              marginLeft: 10,
+              marginRight: 10,
+              borderRadius: 3,
+              elevation: 0,
+              padding: 20,
+              backgroundColor: Colors.tintColor,
+            }}
+            onPress={() => this.showInterstitial()}
+          >
+            <Text style={{
+              fontFamily: 'nunito',
+              fontSize: 20,
+              color: 'white',
+              textAlign: 'center',
+            }}
+            >Prikaži recenzije
+            </Text>
+          </TouchableOpacity>} */}
           {selectedPlace.reviews.map(review => (
             <ReviewCard
               key={Math.random()}

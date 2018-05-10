@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import { Container, Content, Text, Input, Item } from 'native-base';
 import { EvilIcons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
-import { AdMobBanner } from 'expo';
+import { AdMobBanner, AdMobRewarded } from 'expo';
 import ActionButton from 'react-native-action-button';
 import * as Animatable from 'react-native-animatable';
 import Colors from '../../constants/Colors';
@@ -42,6 +42,10 @@ export default class HomeScreen extends React.Component {
   componentDidMount() {
     axios('https://maps.googleapis.com/maps/api/place/textsearch/json?query=food+in+Rijeka&type=restaurant&key=AIzaSyA1PIA1uULQ0nGyuoDZSyMHi3lQj3hG3xA')
       .then(response => this.setState({ results: response.data.results }));
+  }
+
+  componentWillUnmount() {
+    AdMobRewarded.removeAllListeners();
   }
 
   handleSelect(result) {
@@ -188,7 +192,9 @@ export default class HomeScreen extends React.Component {
           }}
         >
           <View style={{ paddingBottom: 20, marginTop: 30 }}>
-            <Text style={{
+            <Text
+              onPress={this.showRewarded}
+              style={{
               color: '#fff',
               fontFamily: 'nexa',
               fontSize: 30,
@@ -236,7 +242,7 @@ export default class HomeScreen extends React.Component {
         </Content>
         {backButtonContent}
         <AdMobBanner
-          bannerSize="fullBanner"
+          bannerSize="smartBannerLandscape"
           adUnitID="ca-app-pub-9853377618487988/2231178453"
           didFailToReceiveAdWithError={() => console.log('error')}
         />
