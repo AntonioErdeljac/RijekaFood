@@ -4,15 +4,16 @@ import {
   View,
   ActivityIndicator,
 } from 'react-native';
-import { Container, Content, Text, Input, Item } from 'native-base';
+import { Container, Content, Text, Input, Item, CardItem, Left } from 'native-base';
 import { EvilIcons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import { AdMobBanner, AdMobRewarded } from 'expo';
 import ActionButton from 'react-native-action-button';
 import * as Animatable from 'react-native-animatable';
 import Colors from '../../constants/Colors';
 import Layout from '../../constants/Layout';
+import Places from '../../constants/Places';
 
-import { ResturantCard, SelectedResturant } from './components';
+import { ResturantCard, SelectedResturant, Contact } from './components';
 
 
 export default class HomeScreen extends React.Component {
@@ -25,24 +26,26 @@ export default class HomeScreen extends React.Component {
     super(props);
 
     this.state = {
-      results: null,
+      results: Places.places,
       search: '',
       searchResults: [],
       selectedPlace: null,
+      showContact: false,
     };
 
     this.content = {};
     this.selectedRef = {};
+    this.contactRef = {};
 
     this.handleSearch = this.handleSearch.bind(this);
     this.handleSelect = this.handleSelect.bind(this);
     this.handleDeselect = this.handleDeselect.bind(this);
   }
 
-  componentDidMount() {
-    axios('https://maps.googleapis.com/maps/api/place/textsearch/json?query=food+in+Rijeka&type=restaurant&key=AIzaSyA1PIA1uULQ0nGyuoDZSyMHi3lQj3hG3xA')
-      .then(response => this.setState({ results: response.data.results }));
-  }
+  // componentDidMount() {
+  //   axios('https://maps.googleapis.com/maps/api/place/textsearch/json?query=food+in+Rijeka&type=restaurant&key=AIzaSyA1PIA1uULQ0nGyuoDZSyMHi3lQj3hG3xA')
+  //     .then(response => this.setState({ results: response.data.results }));
+  // }
 
   componentWillUnmount() {
     AdMobRewarded.removeAllListeners();
@@ -81,38 +84,23 @@ export default class HomeScreen extends React.Component {
   }
 
   handleDeselect() {
-    const { selectedPlace } = this.state;
-
     this.selectedRef.fadeOutLeft(300)
       .then(() => {
         this.setState({
-          tempSelectedPlace: selectedPlace,
+          showContact: false,
           selectedPlace: null,
-        }, () => {
-          if (this.content[this.state.tempSelectedPlace.id]) {
-            this.content[this.state.tempSelectedPlace.id].fadeInRight(500)
-              .then(() => {
-                this.setState({
-                  tempSelectedPlace: null,
-                });
-              });
-          } else {
-            this.setState({
-              tempSelectedPlace: null,
-            });
-          }
         });
       });
   }
 
   render() {
     const {
-      results, search, searchResults, selectedPlace,
+      results, search, searchResults, selectedPlace, showContact,
     } = this.state;
 
     let content = <ActivityIndicator size="large" color={Colors.tintColor} />;
 
-    if (!selectedPlace && results && search === '') {
+    if (!selectedPlace && results && search === '' && !showContact) {
       content = results.map((result, i) => {
         let image = result.icon;
         if (result.photos && result.photos[0]) {
@@ -132,7 +120,7 @@ export default class HomeScreen extends React.Component {
       });
     }
 
-    if (!selectedPlace && results && searchResults && search !== '') {
+    if (!selectedPlace && results && searchResults && search !== '' && !showContact) {
       content = searchResults.map((result, i) => {
         let image = result.icon;
         if (result.photos && result.photos[0]) {
@@ -152,23 +140,36 @@ export default class HomeScreen extends React.Component {
       });
     }
 
-    const backButtonContent = selectedPlace &&
-    <ActionButton
-      buttonColor={Colors.tintColor}
-      onPress={this.handleDeselect}
-      offsetY={80}
-      renderIcon={() => (
-        <Feather size={19} name="arrow-left" color="#fff" />
+    let backButtonContent = null;
+
+    if (selectedPlace || showContact) {
+      backButtonContent =
+      (<ActionButton
+        buttonColor={Colors.tintColor}
+        onPress={this.handleDeselect}
+        renderIcon={() => (
+          <Feather size={19} name="arrow-left" color="#fff" />
         )
       }
-    />;
+      />);
+    }
 
 
-    if (selectedPlace) {
+    if (selectedPlace && !showContact) {
       content = (
         <Animatable.View ref={(ref) => { this.selectedRef = ref; }} >
           <SelectedResturant
             selectedPlace={selectedPlace}
+            deselect={this.handleDeselect}
+          />
+        </Animatable.View>
+      );
+    }
+
+    if (showContact) {
+      content = (
+        <Animatable.View ref={(ref) => { this.selectedRef = ref; }} >
+          <Contact
             deselect={this.handleDeselect}
           />
         </Animatable.View>
@@ -241,11 +242,23 @@ export default class HomeScreen extends React.Component {
           {content}
         </Content>
         {backButtonContent}
-        <AdMobBanner
+        <ActionButton
+          buttonColor={Colors.tintColor}
+          position={selectedPlace || showContact ? 'left' : 'right'}
+          renderIcon={() => <Feather size={19} name="info" color="#fff" />}
+        >
+          <ActionButton.Item buttonColor={Colors.tintColor} title="Želim dodati svoj obrt" onPress={() => this.setState({ showContact: true })}>
+            <Feather size={19} name="plus" color="#fff" />
+          </ActionButton.Item>
+          <ActionButton.Item buttonColor={Colors.tintColor} title="Kontakt" onPress={() => this.setState({ showContact: true })}>
+            <Feather size={19} name="mail" color="#fff" />
+          </ActionButton.Item>
+        </ActionButton>
+        {/* <AdMobBanner
           bannerSize="smartBannerLandscape"
           adUnitID="ca-app-pub-9853377618487988/2231178453"
           didFailToReceiveAdWithError={() => console.log('error')}
-        />
+        /> */}
       </Container>
     );
   }

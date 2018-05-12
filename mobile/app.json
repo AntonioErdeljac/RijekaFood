@@ -17,7 +17,7 @@
     "android": {
       "package": "com.rijekafood.android",
       "permissions": [],
-      "versionCode": 2
+      "versionCode": 3
     },
     "updates": {
       "fallbackToCacheTimeout": 0
